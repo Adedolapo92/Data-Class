@@ -13,7 +13,7 @@ from job_search.output import write_markdown
 from job_search.email_digest import send_digest
 from job_search.scorer import score_job
 from job_search.tracker import JobTracker
-from job_search.scrapers import greenhouse, lever, linkedin, workday
+from job_search.scrapers import greenhouse, lever, linkedin, workday, ashby
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +53,13 @@ def _scrape_all(cfg: dict) -> list[dict[str, Any]]:
             )
         except Exception as exc:
             log.error("Workday scraper failed for %s: %s", board.get("name"), exc)
+
+    # Ashby
+    for slug in cfg.get("companies", {}).get("ashby", []):
+        try:
+            raw.extend(ashby.fetch_jobs(slug))
+        except Exception as exc:
+            log.error("Ashby scraper failed for %s: %s", slug, exc)
 
     # LinkedIn
     li_cfg = cfg.get("linkedin_searches", {})

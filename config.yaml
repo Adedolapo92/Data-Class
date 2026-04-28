@@ -42,6 +42,90 @@ companies:
     - included-health   # remote integrated care
     - brightmd          # remote health
 
+  # ── Ashby ──────────────────────────────────────────────────────────────────
+  # To verify a slug: visit https://jobs.ashbyhq.com/{slug}
+  ashby:
+    # ── AI / LLM companies ────────────────────────────────────────────────────
+    - openai
+    - anthropic
+    - perplexityai
+    - cohere
+    - mistral
+    - characterai
+    - harvey
+    - imbue
+    - adept
+    - wayve
+
+    # ── Modern tech / SaaS / dev tools ────────────────────────────────────────
+    - linear
+    - notion
+    - retool
+    - dbtlabs
+    - census
+    - hex
+    - replit
+    - modal
+    - railway
+    - turso
+    - vercel            # also on Greenhouse — scraper deduplicates
+    - supabase
+    - neon
+    - planetscale
+    - hasura
+    - prefect
+    - dagster
+    - airbyte
+    - meltano
+    - hightouch
+    - growthbook
+    - posthog
+    - metabase
+
+    # ── Data / analytics / observability ─────────────────────────────────────
+    - weights-biases    # Weights & Biases (wandb)
+    - scale             # Scale AI
+    - labelbox
+    - aquant
+    - arize
+    - whylabs
+    - honeycomb
+    - lightstep
+
+    # ── Fintech remote ────────────────────────────────────────────────────────
+    - ramp
+    - mercury
+    - puzzle
+    - moderntreasury
+    - increasefinancial
+    - lithic
+    - synctera
+    - unit
+    - bond
+    - productfy
+
+    # ── Austin tech ───────────────────────────────────────────────────────────
+    - absorb
+    - homeward
+    - keller-williams
+    - opcity
+    - resi
+    - flosports
+    - vrbo
+
+    # ── Healthcare / digital health ───────────────────────────────────────────
+    - nomi
+    - cricket-health
+    - somatus
+    - cityblock
+    - devoted
+    - iora
+    - arcadia
+    - moxe
+    - stellar-health
+    - agilon
+    - privia
+
   lever:
     # To find a Lever slug: visit https://jobs.lever.co/{slug} — if it loads, it works.
     - netflix
