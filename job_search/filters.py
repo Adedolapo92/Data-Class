@@ -96,9 +96,12 @@ def classify_location(location: str, cfg: dict) -> dict[str, Any]:
         label = _preferred_label(loc, cfg["preferred"])
         return {"label": label, "remote": False, "relocation_required": False, "include": True}
 
-    # ── 4. Flagged US cities (NYC, SF, Seattle) — include but warn ────────────
-    is_flagged = any(f in loc_lower for f in flag_list)
-    if is_flagged:
+    # ── 4. Any other recognisable US location → include but flag relocation ──────
+    is_us = (
+        any(f in loc_lower for f in flag_list)
+        or any(signal in loc_lower for signal in _US_SIGNALS)
+    )
+    if is_us:
         return {
             "label": f"{loc} — Relocation Required",
             "remote": False,
@@ -106,15 +109,11 @@ def classify_location(location: str, cfg: dict) -> dict[str, Any]:
             "include": True,
         }
 
-    # ── 5. Other recognisable US location — include ────────────────────────────
-    if any(signal in loc_lower for signal in _US_SIGNALS):
-        return {"label": loc, "remote": False, "relocation_required": False, "include": True}
-
-    # ── 6. Blank / truly unknown — include with flag ───────────────────────────
+    # ── 5. Blank / truly unknown — include with flag ───────────────────────────
     if not loc:
         return {"label": "Location Unknown", "remote": False, "relocation_required": False, "include": True}
 
-    # ── 7. Location present but unrecognised — exclude to be safe ─────────────
+    # ── 6. Location present but unrecognised — exclude to be safe ─────────────
     return {"label": loc, "remote": False, "relocation_required": False, "include": False}
 
 
