@@ -5,6 +5,8 @@ Workday exposes a REST endpoint at:
 Some tenants use wd1/wd2/wd3 instead of wd5; we try each in sequence.
 """
 
+from __future__ import annotations
+
 import logging
 import re
 import time

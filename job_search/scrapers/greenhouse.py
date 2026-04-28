@@ -1,5 +1,7 @@
 """Greenhouse public jobs-board API scraper."""
 
+from __future__ import annotations
+
 import logging
 import re
 from typing import Any
