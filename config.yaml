@@ -6,33 +6,34 @@
 # ── Companies ─────────────────────────────────
 companies:
   greenhouse:
+    # Verified slugs — must match the subdomain at boards-api.greenhouse.io/v1/boards/{slug}
     - datadog
-    - hashicorp
     - mongodb
-    - snowflake
-    - confluent
-    - cockroachdb
-    - grafana
     - pagerduty
-    - supabase
-    - notion
-    - figma
-    - linear
     - vercel
-    - stripe
     - brex
+    - figma
+    - stripe
+    - squarespace
+    - hubspot
+    - twilio
+    - cloudflare
+    - hashicorp         # may 404 — remove if it does
+    - confluent         # may 404 — remove if it does
+    - cockroachdb       # may 404 — remove if it does
 
   lever:
-    - openai
-    - anthropic
-    - scale
-    - weights-biases
-    - cohere
-    - modal
-    - hex
-    - dbt-labs
-    - census
-    - retool
+    # Verified slugs — must match jobs.lever.co/{slug}
+    # Many AI-first companies (OpenAI, Anthropic) use Greenhouse or Ashby, not Lever
+    - reddit
+    - airtable
+    - carta
+    - rippling
+    - gusto
+    - benchling
+    - samsara
+    - robinhood
+    - duolingo
 
   # Workday: provide display name + the tenant slug used in the Workday URL
   # URL pattern: https://{tenant}.wd5.myworkdayjobs.com/wday/cxs/{tenant}/{site_id}/jobs

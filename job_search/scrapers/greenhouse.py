@@ -86,9 +86,9 @@ def fetch_jobs(company: str) -> list[dict[str, Any]]:
     """Return normalised job dicts for *company* from the Greenhouse board."""
     data = _get_json(BASE_URL.format(company=company), company)
 
-    if data and "jobs" in data:
+    if data and data.get("jobs"):
         jobs = []
-        for raw in data["jobs"]:
+        for raw in (data["jobs"] or []):
             location = raw.get("location", {})
             loc_name = location.get("name", "") if isinstance(location, dict) else str(location)
             salary_text = _extract_salary_text(raw)
@@ -121,7 +121,7 @@ def _company_display(raw: dict, slug: str) -> str:
 
 
 def _extract_salary_text(raw: dict) -> str:
-    for meta in raw.get("metadata", []):
+    for meta in (raw.get("metadata") or []):
         name = (meta.get("name") or "").lower()
         if any(k in name for k in ("salary", "compensation", "pay", "wage")):
             value = meta.get("value")
