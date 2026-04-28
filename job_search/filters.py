@@ -32,30 +32,72 @@ def title_matches_exclude(title: str, exclude_patterns: list[str]) -> bool:
 
 # ── Location classification ────────────────────────────────────────────────────
 
+# Signals that definitively indicate a non-US location — roles matching any of
+# these are dropped immediately regardless of other settings.
+_INTERNATIONAL_SIGNALS = [
+    # Countries
+    "ireland", "india", "uk", "united kingdom", "england", "canada", "australia",
+    "germany", "france", "netherlands", "spain", "italy", "poland", "sweden",
+    "singapore", "japan", "china", "brazil", "mexico", "israel", "switzerland",
+    "belgium", "denmark", "finland", "norway", "austria", "portugal", "romania",
+    "czechia", "czech republic", "hungary", "colombia", "argentina", "chile",
+    # Cities that are clearly non-US
+    "dublin", "london", "berlin", "paris", "amsterdam", "toronto", "vancouver",
+    "montreal", "sydney", "melbourne", "bangalore", "bengaluru", "hyderabad",
+    "mumbai", "delhi", "pune", "tel aviv", "zurich", "stockholm", "copenhagen",
+    "oslo", "helsinki", "vienna", "barcelona", "madrid", "lisbon", "warsaw",
+    "prague", "budapest", "bucharest", "singapore",
+    # Generic international markers
+    "emea", "apac", "latam",
+]
+
+# US states and cities that are clearly domestic — used as a positive signal
+# when a location doesn't say "remote" but is still US-based.
+_US_SIGNALS = [
+    "united states", "usa", "u.s.", "u.s.a", ", us", "(us)",
+    "california", "new york", "texas", "washington", "illinois", "georgia",
+    "massachusetts", "florida", "colorado", "oregon", "virginia", "ohio",
+    "north carolina", "michigan", "arizona", "minnesota", "tennessee",
+    "san francisco", "new york city", "nyc", "los angeles", "chicago",
+    "boston", "austin", "seattle", "denver", "atlanta", "miami", "portland",
+    "san jose", "san diego", "dallas", "houston", "phoenix", "raleigh",
+    "nashville", "salt lake city", "minneapolis",
+]
+
+
 def classify_location(location: str, cfg: dict) -> dict[str, Any]:
     """
-    Return:
-      {
-        "label": "Remote" | "Austin TX" | "Relocation Required" | "On-site" | "Unknown",
-        "remote": True/False,
-        "relocation_required": True/False,
-        "include": True/False,  # False only for roles that are strictly on-site in undesirable cities (not filtered here — included with flag)
-      }
+    Return a location classification dict with an `include` flag.
+
+    include=False  → non-US location, drop the role
+    include=True   → US or remote, keep the role
+
+    Label hierarchy:
+      Remote (US) > Austin TX > <City> — Relocation Required > US On-site > Location Unknown
     """
     loc = location or ""
+    loc_lower = loc.lower()
+
     preferred = [p.lower() for p in cfg.get("preferred", [])]
     flag_list = [f.lower() for f in cfg.get("flag_relocation", [])]
 
-    loc_lower = loc.lower()
+    # ── 1. Reject clearly international roles ──────────────────────────────────
+    if any(signal in loc_lower for signal in _INTERNATIONAL_SIGNALS):
+        return {"label": loc, "remote": False, "relocation_required": False, "include": False}
 
-    is_remote = any(p in loc_lower for p in ("remote", "anywhere", "distributed"))
+    # ── 2. Remote — accept (assume US unless international signal above caught it)
+    is_remote = any(p in loc_lower for p in ("remote", "anywhere", "distributed", "work from home", "wfh"))
+    if is_remote:
+        return {"label": "Remote (US)", "remote": True, "relocation_required": False, "include": True}
+
+    # ── 3. Preferred US locations (Austin, etc.) ───────────────────────────────
     is_preferred = any(p in loc_lower for p in preferred)
+    if is_preferred:
+        label = _preferred_label(loc, cfg["preferred"])
+        return {"label": label, "remote": False, "relocation_required": False, "include": True}
+
+    # ── 4. Flagged US cities (NYC, SF, Seattle) — include but warn ────────────
     is_flagged = any(f in loc_lower for f in flag_list)
-
-    if is_remote or is_preferred:
-        label = "Remote (US)" if is_remote else _preferred_label(loc, cfg["preferred"])
-        return {"label": label, "remote": is_remote, "relocation_required": False, "include": True}
-
     if is_flagged:
         return {
             "label": f"{loc} — Relocation Required",
@@ -64,11 +106,16 @@ def classify_location(location: str, cfg: dict) -> dict[str, Any]:
             "include": True,
         }
 
-    # Unknown / other on-site — still include, just label it
+    # ── 5. Other recognisable US location — include ────────────────────────────
+    if any(signal in loc_lower for signal in _US_SIGNALS):
+        return {"label": loc, "remote": False, "relocation_required": False, "include": True}
+
+    # ── 6. Blank / truly unknown — include with flag ───────────────────────────
     if not loc:
         return {"label": "Location Unknown", "remote": False, "relocation_required": False, "include": True}
 
-    return {"label": loc, "remote": False, "relocation_required": False, "include": True}
+    # ── 7. Location present but unrecognised — exclude to be safe ─────────────
+    return {"label": loc, "remote": False, "relocation_required": False, "include": False}
 
 
 def _preferred_label(loc: str, preferred: list[str]) -> str:
@@ -163,8 +210,10 @@ def apply_filters(job: dict[str, Any], cfg: dict) -> dict[str, Any] | None:
     if title_matches_exclude(title, cfg["keywords"]["title_exclude"]):
         return None
 
-    # Location
+    # Location — drop non-US roles immediately
     loc_info = classify_location(job.get("location", ""), cfg["locations"])
+    if not loc_info["include"]:
+        return None
 
     # Salary
     passes, salary_display = salary_passes(
