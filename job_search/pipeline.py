@@ -89,8 +89,8 @@ def _dedup_within_run(jobs: list[dict]) -> list[dict]:
 def run(config_path: str | Path = "config.yaml", dry_run: bool = False) -> list[dict[str, Any]]:
     """
     Execute the full pipeline.
-    Returns the list of scored, filtered, new jobs (for testing / inspection).
-    dry_run=True skips writing files and sending email.
+    Returns the list of scored, filtered, new jobs.
+    dry_run=True sends the email but skips writing files and updating seen_jobs.json.
     """
     cfg = load_config(config_path)
 
@@ -120,18 +120,19 @@ def run(config_path: str | Path = "config.yaml", dry_run: bool = False) -> list[
         job["fit_score"] = score
         job["fit_note"] = note
 
-    # 6. Mark all scraped-and-new as seen (even those filtered out — avoids re-processing)
-    tracker.add_all(new_jobs)
+    # 6. Email digest (always — dry_run still sends email)
+    min_score = cfg.get("email", {}).get("min_score_to_email", 7)
+    high_scoring = [j for j in filtered if j.get("fit_score", 0) >= min_score]
+    send_digest(high_scoring, cfg)
 
     if not dry_run:
+        # 7. Mark seen and save tracker
+        tracker.add_all(new_jobs)
         tracker.save()
 
-        # 7. Write markdown
+        # 8. Write markdown
         write_markdown(filtered, cfg["output"]["results_dir"])
-
-        # 8. Email digest (only roles >= min_score_to_email)
-        min_score = cfg.get("email", {}).get("min_score_to_email", 7)
-        high_scoring = [j for j in filtered if j.get("fit_score", 0) >= min_score]
-        send_digest(high_scoring, cfg)
+    else:
+        log.info("Dry run — skipping seen_jobs.json update and markdown file write.")
 
     return filtered
