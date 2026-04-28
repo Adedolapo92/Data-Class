@@ -196,7 +196,7 @@ email:
   smtp_port: 587
   use_tls: true
   username: dolapoobanla@gmail.com
-  password: "PASTE_APP_PASSWORD_HERE"
+  password: "ogqwjanryueuvmas"
   from_addr: dolapoobanla@gmail.com
   to_addr: dolapoobanla@gmail.com
   subject_prefix: "[Job Digest]"
