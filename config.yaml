@@ -6,7 +6,7 @@
 # ── Companies ─────────────────────────────────
 companies:
   greenhouse:
-    # Verified slugs — must match the subdomain at boards-api.greenhouse.io/v1/boards/{slug}
+    # ── General tech / cloud / platform ───────────────────────────────────────
     - datadog
     - mongodb
     - pagerduty
@@ -18,23 +18,46 @@ companies:
     - hubspot
     - twilio
     - cloudflare
-    - hashicorp         # may 404 — remove if it does
-    - confluent         # may 404 — remove if it does
-    - cockroachdb       # may 404 — remove if it does
+    - cockroachdb
+    - plaid             # fintech / data infrastructure
+    - chime             # fintech remote
+    - marqeta           # fintech remote
+    - robinhood         # fintech remote
+
+    # ── Austin-headquartered / strong Austin presence ─────────────────────────
+    - bigcommerce       # Austin e-commerce platform
+    - sailpoint         # Austin identity security SaaS
+    - bumble            # Austin social tech
+    - wpengine          # Austin WordPress platform
+    - indeed            # Austin job platform
+    - civitas           # Austin civic tech
+
+    # ── Healthcare / digital health (Austin + remote) ─────────────────────────
+    - hims-hers         # telehealth remote
+    - accolade          # health navigation remote
+    - transcarent       # Austin/remote health
+    - komodohealth      # health data remote
+    - wheel             # Austin telehealth platform
+    - sana              # Austin health benefits
+    - included-health   # remote integrated care
+    - brightmd          # remote health
 
   lever:
     # To find a Lever slug: visit https://jobs.lever.co/{slug} — if it loads, it works.
-    # Add slugs here that you've confirmed. Examples below are known to work:
     - netflix
     - lyft
     - box
+    - lattice           # HR tech remote
+    - gusto             # HR/fintech remote
+    - carta             # fintech / equity management
+    - blend             # fintech mortgage remote
+    - stash             # fintech remote
 
   # Workday: provide display name + the tenant slug used in the Workday URL
-  # URL pattern: https://{tenant}.wd5.myworkdayjobs.com/wday/cxs/{tenant}/{site_id}/jobs
+  # URL pattern: https://{tenant}.wd{N}.myworkdayjobs.com/wday/cxs/{tenant}/{site_id}/jobs
+  # Find tenant+site_id: open company careers page → DevTools → Network → filter "wday/cxs"
   workday:
-    # tenant = subdomain of {tenant}.wd5.myworkdayjobs.com (version tried automatically)
-    # site_id = the path segment after the tenant in the Workday URL
-    # Find it by visiting careers page → inspect network requests for "wday/cxs"
+    # ── Enterprise SaaS ───────────────────────────────────────────────────────
     - name: Salesforce
       tenant: salesforce
       site_id: External
@@ -54,20 +77,85 @@ companies:
       tenant: sap
       site_id: External
 
+    # ── Austin tech ───────────────────────────────────────────────────────────
+    - name: Dell Technologies
+      tenant: dell
+      site_id: External
+    - name: NXP Semiconductors
+      tenant: nxp
+      site_id: External
+    - name: Charles Schwab
+      tenant: schwab
+      site_id: External
+    - name: Oracle
+      tenant: oracle
+      site_id: External
+
+    # ── Fintech (Austin + remote) ─────────────────────────────────────────────
+    - name: Visa
+      tenant: visa
+      site_id: External
+    - name: Mastercard
+      tenant: mastercard
+      site_id: External
+    - name: PayPal
+      tenant: paypal
+      site_id: External
+    - name: Intuit
+      tenant: intuit
+      site_id: External
+    - name: Fiserv
+      tenant: fiserv
+      site_id: External
+
+    # ── Healthcare (Austin + remote) ──────────────────────────────────────────
+    - name: Teladoc Health
+      tenant: teladoc
+      site_id: External
+    - name: Evolent Health
+      tenant: evolent
+      site_id: External
+    - name: Signify Health
+      tenant: signifyhealth
+      site_id: External
+    - name: Alignment Healthcare
+      tenant: alignmenthealthcare
+      site_id: External
+
 # ── LinkedIn keyword searches ──────────────────
-# These run against ALL companies, not just the list above.
+# Searches run for every keyword × every location combination.
+# Keep the list focused — each combo is a separate HTTP request.
 linkedin_searches:
   keywords:
-    - "Senior Product Manager cloud"
-    - "Staff Product Manager AI"
-    - "Principal Product Manager platform"
-    - "Senior TPM cloud infrastructure"
-    - "Group Product Manager B2B SaaS"
+    # ── General tech / platform ───────────────────────────────────────────────
+    - "Senior Product Manager cloud infrastructure"
+    - "Staff Product Manager AI ML platform"
+    - "Principal Product Manager B2B SaaS"
+    - "Senior Technical Program Manager cloud"
+    - "Group Product Manager enterprise"
+
+    # ── Austin tech ───────────────────────────────────────────────────────────
+    - "Senior Product Manager Austin Texas tech"
+    - "Staff Product Manager Austin Texas remote"
+    - "Technical Program Manager Austin Texas"
+
+    # ── Healthcare / digital health ───────────────────────────────────────────
+    - "Senior Product Manager digital health remote"
+    - "Senior Product Manager healthtech telehealth"
+    - "Staff Product Manager healthcare platform"
+    - "Senior Product Manager health Austin Texas"
+
+    # ── Fintech ───────────────────────────────────────────────────────────────
+    - "Senior Product Manager fintech payments remote"
+    - "Staff Product Manager fintech platform"
+    - "Senior Product Manager financial technology Austin"
+
   locations:
     - "United States"
     - "Austin, Texas"
-  # f_WT=2 → remote; f_WT=1 → on-site; f_WT=3 → hybrid
-  remote_filter: true   # adds f_WT=2 to every search
+
+  # f_WT=2 → remote only. Set to false to also see on-site Austin roles.
+  remote_filter: true
 
 # ── Title matching ─────────────────────────────
 keywords:
@@ -152,10 +240,17 @@ domains:
     - developer tools
     - devtools
     - fintech
+    - payments
+    - financial technology
     - data analytics
     - data platform
     - infrastructure
     - security
+    - digital health
+    - healthtech
+    - telehealth
+    - health platform
+    - Austin
 
   low_fit:
     - consumer gaming
