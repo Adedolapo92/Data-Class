@@ -1,0 +1,208 @@
+# ─────────────────────────────────────────────
+#  Job Search Pipeline — Configuration
+# ─────────────────────────────────────────────
+# Edit this file freely; never touch the source code for these settings.
+
+# ── Companies ─────────────────────────────────
+companies:
+  greenhouse:
+    - datadog
+    - hashicorp
+    - mongodb
+    - snowflake
+    - confluent
+    - cockroachdb
+    - grafana
+    - pagerduty
+    - supabase
+    - notion
+    - figma
+    - linear
+    - vercel
+    - stripe
+    - brex
+
+  lever:
+    - openai
+    - anthropic
+    - scale
+    - weights-biases
+    - cohere
+    - modal
+    - hex
+    - dbt-labs
+    - census
+    - retool
+
+  # Workday: provide display name + the tenant slug used in the Workday URL
+  # URL pattern: https://{tenant}.wd5.myworkdayjobs.com/wday/cxs/{tenant}/{site_id}/jobs
+  workday:
+    - name: Microsoft
+      tenant: microsoft
+      site_id: External
+    - name: Amazon
+      tenant: amazon
+      site_id: External
+    - name: Google
+      tenant: google
+      site_id: External
+    - name: Salesforce
+      tenant: salesforce
+      site_id: External
+    - name: ServiceNow
+      tenant: servicenow
+      site_id: External
+    - name: Workday
+      tenant: workday
+      site_id: External
+
+# ── LinkedIn keyword searches ──────────────────
+# These run against ALL companies, not just the list above.
+linkedin_searches:
+  keywords:
+    - "Senior Product Manager cloud"
+    - "Staff Product Manager AI"
+    - "Principal Product Manager platform"
+    - "Senior TPM cloud infrastructure"
+    - "Group Product Manager B2B SaaS"
+  locations:
+    - "United States"
+    - "Austin, Texas"
+  # f_WT=2 → remote; f_WT=1 → on-site; f_WT=3 → hybrid
+  remote_filter: true   # adds f_WT=2 to every search
+
+# ── Title matching ─────────────────────────────
+keywords:
+  title_include:
+    - "Senior Product Manager"
+    - "Senior PM"
+    - "Staff Product Manager"
+    - "Staff PM"
+    - "Principal Product Manager"
+    - "Principal PM"
+    - "Senior Technical Program Manager"
+    - "Senior TPM"
+    - "TPM II"
+    - "TPM 2"
+    - "Group Product Manager"
+    - "Product Lead"
+    - "Product Manager III"
+    - "PM III"
+
+  title_exclude:
+    - "Supply Chain"
+    - "Hardware"
+    - "NPI"
+    - "New Product Introduction"
+    - "Space Planning"
+    - "Facilities"
+    - "Real Estate"
+    - "Manufacturing"
+    - "Retail"
+    - "AppleCare"
+    - "Contact Center"
+    - "Procurement"
+    - "Fulfillment"
+    - "Warehouse"
+
+  # Keywords from your professional background — used for fit scoring
+  background:
+    - AWS
+    - Azure
+    - cloud infrastructure
+    - cloud
+    - AI/ML
+    - machine learning
+    - artificial intelligence
+    - LLM
+    - B2B
+    - enterprise
+    - SaaS
+    - platform
+    - Agile
+    - cross-functional
+    - Jira
+    - Figma
+    - SQL
+    - data analytics
+    - observability
+    - developer tools
+    - devtools
+    - API
+    - Kubernetes
+    - distributed systems
+    - roadmap
+    - go-to-market
+    - GTM
+    - technical program manager
+    - TPM
+    - product manager
+
+# ── Domain fit ─────────────────────────────────
+domains:
+  high_fit:
+    - cloud infrastructure
+    - cloud
+    - AI/ML
+    - machine learning
+    - artificial intelligence
+    - platform
+    - B2B
+    - enterprise
+    - SaaS
+    - observability
+    - developer tools
+    - devtools
+    - fintech
+    - data analytics
+    - data platform
+    - infrastructure
+    - security
+
+  low_fit:
+    - consumer gaming
+    - gaming
+    - hardware
+    - physical product
+    - logistics
+    - supply chain
+    - e-commerce
+    - retail
+
+# ── Location preferences ───────────────────────
+locations:
+  # Roles matching these strings are considered "preferred"
+  preferred:
+    - Remote
+    - remote
+    - Austin
+    - austin
+
+  # These are included but flagged "relocation required"
+  flag_relocation:
+    - New York
+    - NYC
+    - San Francisco
+    - SF
+    - Seattle
+
+# ── Compensation filter ────────────────────────
+compensation:
+  minimum_max_salary: 150000   # include only if listed max >= this; include unknowns too
+
+# ── Email / SMTP ───────────────────────────────
+email:
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  use_tls: true
+  username: you@gmail.com           # your Gmail (or other SMTP) address
+  password: "your_app_password"     # Gmail: use an App Password, not your login password
+  from_addr: you@gmail.com
+  to_addr: you@gmail.com
+  subject_prefix: "[Job Digest]"
+  min_score_to_email: 7             # only email roles with fit score >= this
+
+# ── Output ────────────────────────────────────
+output:
+  results_dir: results              # markdown files go here
+  seen_jobs_file: seen_jobs.json    # persistent dedup store
