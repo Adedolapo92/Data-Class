@@ -14,7 +14,7 @@ from typing import Any
 
 import requests
 
-WORKDAY_VERSIONS = ["wd5", "wd3", "wd1"]
+WORKDAY_VERSIONS = ["wd5", "wd12", "wd3", "wd1", "wd2", "wd8", "wd10"]
 SEARCH_PATH = "wday/cxs/{tenant}/{site_id}/jobs"
 PAGE_SIZE = 20
 

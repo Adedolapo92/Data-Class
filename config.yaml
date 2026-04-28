@@ -23,37 +23,35 @@ companies:
     - cockroachdb       # may 404 — remove if it does
 
   lever:
-    # Verified slugs — must match jobs.lever.co/{slug}
-    # Many AI-first companies (OpenAI, Anthropic) use Greenhouse or Ashby, not Lever
-    - reddit
-    - airtable
-    - carta
-    - rippling
-    - gusto
-    - benchling
-    - samsara
-    - robinhood
-    - duolingo
+    # To find a Lever slug: visit https://jobs.lever.co/{slug} — if it loads, it works.
+    # Add slugs here that you've confirmed. Examples below are known to work:
+    - netflix
+    - lyft
+    - box
 
   # Workday: provide display name + the tenant slug used in the Workday URL
   # URL pattern: https://{tenant}.wd5.myworkdayjobs.com/wday/cxs/{tenant}/{site_id}/jobs
   workday:
-    # Tenant slug = subdomain at {tenant}.wd5.myworkdayjobs.com
-    # Amazon and Google do NOT use Workday — they have custom career sites
-    - name: Microsoft
-      tenant: microsoftcareers
-      site_id: External
+    # tenant = subdomain of {tenant}.wd5.myworkdayjobs.com (version tried automatically)
+    # site_id = the path segment after the tenant in the Workday URL
+    # Find it by visiting careers page → inspect network requests for "wday/cxs"
     - name: Salesforce
       tenant: salesforce
       site_id: External
     - name: ServiceNow
       tenant: servicenow
-      site_id: External
+      site_id: External_Careers
     - name: Adobe
       tenant: adobe
       site_id: External
     - name: Splunk
       tenant: splunk
+      site_id: External
+    - name: VMware
+      tenant: vmware
+      site_id: External
+    - name: SAP
+      tenant: sap
       site_id: External
 
 # ── LinkedIn keyword searches ──────────────────
