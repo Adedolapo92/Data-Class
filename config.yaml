@@ -195,10 +195,10 @@ email:
   smtp_host: smtp.gmail.com
   smtp_port: 587
   use_tls: true
-  username: you@gmail.com           # your Gmail (or other SMTP) address
-  password: "your_app_password"     # Gmail: use an App Password, not your login password
-  from_addr: you@gmail.com
-  to_addr: you@gmail.com
+  username: dolapoobanla@gmail.com
+  password: "PASTE_APP_PASSWORD_HERE"
+  from_addr: dolapoobanla@gmail.com
+  to_addr: dolapoobanla@gmail.com
   subject_prefix: "[Job Digest]"
   min_score_to_email: 7             # only email roles with fit score >= this
 
