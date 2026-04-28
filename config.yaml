@@ -37,14 +37,10 @@ companies:
   # Workday: provide display name + the tenant slug used in the Workday URL
   # URL pattern: https://{tenant}.wd5.myworkdayjobs.com/wday/cxs/{tenant}/{site_id}/jobs
   workday:
+    # Tenant slug = subdomain at {tenant}.wd5.myworkdayjobs.com
+    # Amazon and Google do NOT use Workday — they have custom career sites
     - name: Microsoft
-      tenant: microsoft
-      site_id: External
-    - name: Amazon
-      tenant: amazon
-      site_id: External
-    - name: Google
-      tenant: google
+      tenant: microsoftcareers
       site_id: External
     - name: Salesforce
       tenant: salesforce
@@ -52,8 +48,11 @@ companies:
     - name: ServiceNow
       tenant: servicenow
       site_id: External
-    - name: Workday
-      tenant: workday
+    - name: Adobe
+      tenant: adobe
+      site_id: External
+    - name: Splunk
+      tenant: splunk
       site_id: External
 
 # ── LinkedIn keyword searches ──────────────────

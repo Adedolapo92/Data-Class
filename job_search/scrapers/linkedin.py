@@ -34,10 +34,18 @@ SESSION.headers.update(
 )
 
 
+_session_warmed = False
+
+
 def _warm_session() -> None:
-    """Hit the LinkedIn jobs page first to pick up cookies."""
+    """Hit the LinkedIn jobs page once per process to pick up cookies."""
+    global _session_warmed
+    if _session_warmed:
+        return
     try:
         SESSION.get("https://www.linkedin.com/jobs/search/", timeout=10)
+        _session_warmed = True
+        time.sleep(2)
     except requests.RequestException:
         pass
 
@@ -50,6 +58,7 @@ def fetch_jobs(
 ) -> list[dict[str, Any]]:
     """Scrape LinkedIn guest API for *keyword* + *location*."""
     _warm_session()
+    time.sleep(3)  # rate-limit between searches
 
     params: dict[str, Any] = {
         "keywords": keyword,
@@ -68,7 +77,8 @@ def fetch_jobs(
         return []
 
     soup = BeautifulSoup(resp.text, "lxml")
-    cards = soup.find_all("li")
+    # Cards can appear as <li> with a job-id attr or inside div.base-card
+    cards = soup.find_all("li") or soup.find_all("div", class_="base-card")
     jobs: list[dict[str, Any]] = []
 
     for card in cards:
