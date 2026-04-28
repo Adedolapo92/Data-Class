@@ -1,8 +1,7 @@
 """Workday jobs API scraper.
 
-Workday exposes a private-but-consistent REST endpoint at:
+Workday exposes a REST endpoint at:
   POST https://{tenant}.wd5.myworkdayjobs.com/wday/cxs/{tenant}/{site_id}/jobs
-with a JSON body of {"searchText": "", "limit": N, "offset": 0}.
 Some tenants use wd1/wd2/wd3 instead of wd5; we try each in sequence.
 """
 
@@ -15,29 +14,43 @@ import requests
 
 WORKDAY_VERSIONS = ["wd5", "wd3", "wd1"]
 SEARCH_PATH = "wday/cxs/{tenant}/{site_id}/jobs"
-JOB_DETAIL_PATH = "wday/cxs/{tenant}/{site_id}/jobs/{job_id}"
 PAGE_SIZE = 20
-
-HEADERS = {
-    "Accept": "application/json",
-    "Content-Type": "application/json",
-}
 
 log = logging.getLogger(__name__)
 
+SESSION = requests.Session()
+SESSION.headers.update(
+    {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Content-Type": "application/json",
+        "X-Workday-Client": "2023.43.8",
+    }
+)
 
-def _post(url: str, body: dict) -> dict | None:
+
+def _base_url(tenant: str, version: str) -> str:
+    return f"https://{tenant}.{version}.myworkdayjobs.com"
+
+
+def _post(url: str, body: dict, tenant: str) -> dict | None:
     try:
-        resp = requests.post(url, json=body, headers=HEADERS, timeout=20)
+        resp = SESSION.post(
+            url,
+            json=body,
+            headers={"Referer": f"https://{tenant}.wd5.myworkdayjobs.com/"},
+            timeout=20,
+        )
         resp.raise_for_status()
         return resp.json()
     except requests.RequestException as exc:
         log.debug("Workday POST failed %s: %s", url, exc)
         return None
-
-
-def _base_url(tenant: str, version: str) -> str:
-    return f"https://{tenant}.{version}.myworkdayjobs.com"
 
 
 def fetch_jobs(
@@ -54,7 +67,7 @@ def fetch_jobs(
     data = None
     for version in WORKDAY_VERSIONS:
         url = f"{_base_url(tenant, version)}/{path}"
-        data = _post(url, body)
+        data = _post(url, body, tenant)
         if data is not None:
             base = _base_url(tenant, version)
             break
@@ -66,11 +79,10 @@ def fetch_jobs(
     postings = data.get("jobPostings") or []
     total = data.get("total", len(postings))
 
-    # paginate
     offset = PAGE_SIZE
     while offset < total and len(postings) < 200:
         body["offset"] = offset
-        more = _post(f"{base}/{path}", body)
+        more = _post(f"{base}/{path}", body, tenant)
         if not more:
             break
         batch = more.get("jobPostings") or []
@@ -82,28 +94,28 @@ def fetch_jobs(
 
     jobs: list[dict[str, Any]] = []
     for raw in postings:
-        ext_id = raw.get("externalPath", "").strip("/").split("/")[-1]
-        job_url = f"{base}/{SEARCH_PATH.format(tenant=tenant, site_id=site_id)}/{ext_id}" if ext_id else ""
+        ext_path = raw.get("externalPath", "").strip("/")
+        job_id = ext_path.split("/")[-1] if ext_path else raw.get("title", "")
+        job_url = f"{base}/{ext_path}" if ext_path else ""
+
         loc_tag = raw.get("locationsText") or raw.get("primaryLocation") or ""
         if isinstance(loc_tag, dict):
             loc_tag = loc_tag.get("descriptor", "")
 
-        salary_text = _extract_salary_text(raw)
-
         jobs.append(
             {
-                "id": f"workday_{tenant}_{ext_id or raw.get('title', '')}",
+                "id": f"workday_{tenant}_{job_id}",
                 "source": "Workday",
                 "company": company_name,
                 "title": raw.get("title", ""),
                 "location": loc_tag,
                 "url": job_url,
                 "description": raw.get("jobDescription") or raw.get("briefDescription") or "",
-                "salary_text": salary_text,
+                "salary_text": _extract_salary_text(raw),
             }
         )
 
-    log.info("Workday: %d jobs fetched for %s (tenant=%s)", len(jobs), company_name, tenant)
+    log.info("Workday: %d jobs for %s (tenant=%s)", len(jobs), company_name, tenant)
     return jobs
 
 

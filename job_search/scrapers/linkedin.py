@@ -4,7 +4,6 @@ import logging
 import re
 import time
 from typing import Any
-from urllib.parse import urlencode
 
 import requests
 from bs4 import BeautifulSoup
@@ -12,15 +11,33 @@ from bs4 import BeautifulSoup
 SEARCH_URL = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 DETAIL_URL = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{job_id}"
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-}
-
 log = logging.getLogger(__name__)
+
+SESSION = requests.Session()
+SESSION.headers.update(
+    {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://www.linkedin.com/jobs/search/",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+    }
+)
+
+
+def _warm_session() -> None:
+    """Hit the LinkedIn jobs page first to pick up cookies."""
+    try:
+        SESSION.get("https://www.linkedin.com/jobs/search/", timeout=10)
+    except requests.RequestException:
+        pass
 
 
 def fetch_jobs(
@@ -30,6 +47,8 @@ def fetch_jobs(
     max_results: int = 25,
 ) -> list[dict[str, Any]]:
     """Scrape LinkedIn guest API for *keyword* + *location*."""
+    _warm_session()
+
     params: dict[str, Any] = {
         "keywords": keyword,
         "location": location,
@@ -37,10 +56,10 @@ def fetch_jobs(
         "count": max_results,
     }
     if remote_only:
-        params["f_WT"] = 2  # 2 = remote
+        params["f_WT"] = 2
 
     try:
-        resp = requests.get(SEARCH_URL, params=params, headers=HEADERS, timeout=20)
+        resp = SESSION.get(SEARCH_URL, params=params, timeout=20)
         resp.raise_for_status()
     except requests.RequestException as exc:
         log.warning("LinkedIn search failed (keyword=%s): %s", keyword, exc)
@@ -62,14 +81,14 @@ def fetch_jobs(
 
         title = title_tag.get_text(strip=True) if title_tag else ""
         company = company_tag.get_text(strip=True) if company_tag else ""
-        location = location_tag.get_text(strip=True) if location_tag else ""
+        loc = location_tag.get_text(strip=True) if location_tag else ""
         url = link_tag["href"].split("?")[0] if link_tag else ""
 
         if not title:
             continue
 
         description, salary_text = _fetch_job_detail(job_id)
-        time.sleep(0.5)  # be polite
+        time.sleep(0.75)
 
         jobs.append(
             {
@@ -77,14 +96,14 @@ def fetch_jobs(
                 "source": "LinkedIn",
                 "company": company,
                 "title": title,
-                "location": location,
+                "location": loc,
                 "url": url,
                 "description": description,
                 "salary_text": salary_text,
             }
         )
 
-    log.info("LinkedIn: %d jobs fetched for keyword=%s, location=%s", len(jobs), keyword, location)
+    log.info("LinkedIn: %d jobs for keyword=%s location=%s", len(jobs), keyword, location)
     return jobs
 
 
@@ -104,9 +123,8 @@ def _extract_job_id(card) -> str:
 
 
 def _fetch_job_detail(job_id: str) -> tuple[str, str]:
-    """Return (description_text, salary_text) for a single LinkedIn job."""
     try:
-        resp = requests.get(DETAIL_URL.format(job_id=job_id), headers=HEADERS, timeout=15)
+        resp = SESSION.get(DETAIL_URL.format(job_id=job_id), timeout=15)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")
 
@@ -130,5 +148,5 @@ def _fetch_job_detail(job_id: str) -> tuple[str, str]:
         return description, salary_text
 
     except requests.RequestException as exc:
-        log.debug("LinkedIn detail fetch failed for job_id=%s: %s", job_id, exc)
+        log.debug("LinkedIn detail failed for job_id=%s: %s", job_id, exc)
         return "", ""
