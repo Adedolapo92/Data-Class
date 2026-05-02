@@ -377,7 +377,7 @@ email:
   from_addr: dolapoobanla@gmail.com
   to_addr: dolapoobanla@gmail.com
   subject_prefix: "[Job Digest]"
-  min_score_to_email: 7             # only email roles with fit score >= this
+  min_score_to_email: 5             # lowered for testing — raise back to 7 once email is confirmed working
 
 # ── Output ────────────────────────────────────
 output:
