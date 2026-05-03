@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess for Beginners ♟</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #eef0f3; }
+  button { font-family: inherit; }
+  @media (max-width: 900px) {
+    #layout { flex-direction: column !important; }
+    #sidebar { position: static !important; width: 100% !important; display: flex !important; flex-wrap: wrap !important; gap: 6px !important; }
+    #sidebar button { width: auto !important; flex: 1 1 140px !important; }
+    #lesson-body { flex-direction: column !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── Piece symbols ──────────────────────────────────────────────────────────────
+const SYM = {
+  wK:'♔', wQ:'♕', wR:'♖', wB:'♗', wN:'♘', wP:'♙',
+  bK:'♚', bQ:'♛', bR:'♜', bB:'♝', bN:'♞', bP:'♟',
+};
+
+const FILES = ['a','b','c','d','e','f','g','h'];
+const toSq  = (f,r) => (f>=0&&f<=7&&r>=0&&r<=7) ? FILES[f]+(r+1) : null;
+const frSq  = sq    => [FILES.indexOf(sq[0]), parseInt(sq[1])-1];
+
+// ── Move generation ─────────────────────────────────────────────────────────────
+function sliding(f,r,color,board,dirs) {
+  const out = [];
+  for (const [df,dr] of dirs) {
+    let nf=f+df, nr=r+dr;
+    while(nf>=0&&nf<=7&&nr>=0&&nr<=7) {
+      const sq = toSq(nf,nr);
+      if (board[sq]) { if(board[sq][0]!==color) out.push(sq); break; }
+      out.push(sq);
+      nf+=df; nr+=dr;
+    }
+  }
+  return out;
+}
+
+function getMoves(piece, square, board) {
+  const color=piece[0], type=piece[1];
+  const [f,r] = frSq(square);
+  const ok = s => s && (!board[s] || board[s][0]!==color);
+
+  if (type==='K') {
+    const m=[];
+    for(let df=-1;df<=1;df++) for(let dr=-1;dr<=1;dr++)
+      if(df||dr){const s=toSq(f+df,r+dr); if(ok(s))m.push(s);}
+    return m;
+  }
+  if (type==='Q') return sliding(f,r,color,board,[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]);
+  if (type==='R') return sliding(f,r,color,board,[[-1,0],[1,0],[0,-1],[0,1]]);
+  if (type==='B') return sliding(f,r,color,board,[[-1,-1],[-1,1],[1,-1],[1,1]]);
+  if (type==='N') {
+    const m=[];
+    for(const [df,dr] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]])
+      {const s=toSq(f+df,r+dr); if(ok(s))m.push(s);}
+    return m;
+  }
+  if (type==='P') {
+    const m=[], dir=color==='w'?1:-1, start=color==='w'?1:6;
+    const fwd=toSq(f,r+dir);
+    if(fwd&&!board[fwd]) {
+      m.push(fwd);
+      const fwd2=toSq(f,r+2*dir);
+      if(r===start&&fwd2&&!board[fwd2]) m.push(fwd2);
+    }
+    for(const df of[-1,1]) {
+      const cap=toSq(f+df,r+dir);
+      if(cap&&board[cap]&&board[cap][0]!==color) m.push(cap);
+    }
+    return m;
+  }
+  return [];
+}
+
+// ── Board positions ─────────────────────────────────────────────────────────────
+const START = {
+  a1:'wR',b1:'wN',c1:'wB',d1:'wQ',e1:'wK',f1:'wB',g1:'wN',h1:'wR',
+  a2:'wP',b2:'wP',c2:'wP',d2:'wP',e2:'wP',f2:'wP',g2:'wP',h2:'wP',
+  a7:'bP',b7:'bP',c7:'bP',d7:'bP',e7:'bP',f7:'bP',g7:'bP',h7:'bP',
+  a8:'bR',b8:'bN',c8:'bB',d8:'bQ',e8:'bK',f8:'bB',g8:'bN',h8:'bR',
+};
+
+// ── Lesson data ─────────────────────────────────────────────────────────────────
+const LESSONS = [
+  {
+    title:'Welcome to Chess!', subtitle:'Your journey starts here', emoji:'👋',
+    content:[
+      {type:'text', text:"Chess is one of the most popular games in the world — played by millions of people of all ages. The best part? Anyone can learn it, and we'll take it step by step!"},
+      {type:'box',color:'green',icon:'♟',title:'What is Chess?',
+        text:"Chess is a 2-player strategy game. One player uses White pieces, the other uses Black pieces. White always moves first!"},
+      {type:'box',color:'blue',icon:'🎯',title:'The Goal',
+        text:"You win by trapping your opponent's King so it can't escape — this is called CHECKMATE. Simple idea, endless depth!"},
+      {type:'list',title:'In this course you will learn:',
+        items:['How the board is laid out','How each piece moves','Special rules and moves','Beginner tips to start winning']},
+      {type:'tip',text:"Chess takes just minutes to learn, but a lifetime to master. Let's start!"},
+    ],
+    board:START, interactive:false,
+    boardLabel:"Starting position — this is how the board looks at the beginning of every game!",
+  },
+  {
+    title:'The Chess Board', subtitle:'Understanding your battlefield', emoji:'🎯',
+    content:[
+      {type:'text', text:"Before touching any pieces, you need to understand the board. It's simpler than it looks!"},
+      {type:'box',color:'green',icon:'📐',title:'8×8 = 64 Squares',
+        text:"The board has 8 columns and 8 rows — 64 squares total. Squares alternate between light and dark colors."},
+      {type:'box',color:'blue',icon:'🗺️',title:'Files & Ranks',
+        text:"Columns (up–down) are called FILES, labeled a through h. Rows (left–right) are called RANKS, labeled 1 through 8. Every square has a unique address — file + rank. For example: e4 = column e, row 4."},
+      {type:'box',color:'yellow',icon:'📍',title:'Board Orientation',
+        text:"White's pieces always start at the BOTTOM (ranks 1–2). Black's pieces start at the TOP (ranks 7–8). Always place the board so a light square sits at the bottom-right corner."},
+      {type:'tip', text:"Memory trick: 'Light on the right!' — the bottom-right square should always be light."},
+    ],
+    board:{}, interactive:false,
+    boardLabel:"Empty board — study the file letters (a–h) across the bottom and rank numbers (1–8) on the side!",
+  },
+  {
+    title:'Setting Up the Pieces', subtitle:'Getting ready to play', emoji:'🏗️',
+    content:[
+      {type:'text', text:"Each side starts with 16 pieces: 1 King, 1 Queen, 2 Rooks, 2 Bishops, 2 Knights, and 8 Pawns."},
+      {type:'box',color:'green',icon:'🏰',title:'The Back Row (Rank 1 for White, Rank 8 for Black)',
+        text:"From left to right: Rook — Knight — Bishop — Queen — King — Bishop — Knight — Rook.\n\nEasy memory trick: 'Rooks in the corners, Knights next, Bishops next, then Queen and King!'"},
+      {type:'box',color:'purple',icon:'👸',title:"Queen's Color Rule",
+        text:"The Queen always goes on HER OWN color! White Queen on a light square (d1). Black Queen on a dark square (d8). Remember: 'Queen on her color!'"},
+      {type:'box',color:'blue',icon:'⚔️',title:'The Pawn Wall',
+        text:"All 8 Pawns line up on rank 2 for White and rank 7 for Black, forming a protective wall in front of your other pieces."},
+      {type:'tip', text:"After setup, both Kings should be directly across from each other on the e-file. Use that as a quick check!"},
+    ],
+    board:START, interactive:false,
+    boardLabel:"Full starting position — White on ranks 1–2, Black on ranks 7–8.",
+  },
+  {
+    title:'The King ♔', subtitle:'The most important piece', emoji:'👑',
+    content:[
+      {type:'text', text:"The King is the most important piece on the board. If your King is cornered with no escape, the game is over — you lose!"},
+      {type:'box',color:'green',icon:'👣',title:'How the King Moves',
+        text:"The King moves exactly ONE square in any direction — forward, backward, sideways, or diagonally. That gives it up to 8 possible squares."},
+      {type:'box',color:'red',icon:'⚠️',title:'The King Must Stay Safe',
+        text:"The King can NEVER move to a square where an enemy piece could capture it. He must always stay out of danger!"},
+      {type:'box',color:'yellow',icon:'💡',title:'Not the Most Powerful',
+        text:"Even though the King is the most important piece, he's not the most powerful mover. Keep him protected — especially in the opening!"},
+      {type:'interaction', text:"Click the White King on the board to see all the squares it can move to!"},
+    ],
+    board:{e4:'wK', d6:'bP', f6:'bP', c5:'bB'},
+    interactive:true, clickable:'w',
+    boardLabel:"Click the White King (♔) — the highlighted dots show where it can move!",
+  },
+  {
+    title:'The Queen ♕', subtitle:'The most powerful piece', emoji:'👸',
+    content:[
+      {type:'text', text:"The Queen is the most powerful piece in chess. She moves like every other piece combined (except the Knight) and can cover huge distances in a single move!"},
+      {type:'box',color:'green',icon:'💫',title:'How the Queen Moves',
+        text:"The Queen can move horizontally, vertically, OR diagonally — any number of squares in any direction. She combines the Rook's straight lines and the Bishop's diagonals."},
+      {type:'box',color:'red',icon:'💰',title:"The Queen's Value",
+        text:"The Queen is worth about 9 points (a Pawn = 1 point). Losing your Queen is usually a disaster — guard her well!"},
+      {type:'tip', text:"Don't rush your Queen out in the early game. Your opponent can chase her around and waste your turns. Develop your other pieces first!"},
+      {type:'interaction', text:"Click the White Queen and see just how far she reaches across the board!"},
+    ],
+    board:{d4:'wQ', c7:'bP', g7:'bN', a4:'bR'},
+    interactive:true, clickable:'w',
+    boardLabel:"Click the White Queen (♕) — she reaches almost everywhere!",
+  },
+  {
+    title:'The Rook ♖', subtitle:'The straight-line powerhouse', emoji:'🏰',
+    content:[
+      {type:'text', text:"The Rook looks like a castle tower and moves like one — in perfectly straight lines. It's the second most powerful piece!"},
+      {type:'box',color:'green',icon:'↔️',title:'How the Rook Moves',
+        text:"The Rook moves horizontally OR vertically — left, right, up, or down — any number of squares. It cannot move diagonally."},
+      {type:'box',color:'blue',icon:'💰',title:"The Rook's Value",
+        text:"A Rook is worth about 5 points. Two Rooks working together on the same file ('doubled Rooks') are extremely powerful!"},
+      {type:'box',color:'purple',icon:'📋',title:'Open Files are Key',
+        text:"Rooks are most powerful on 'open files' — columns with no pawns blocking them. One of your main goals should be getting Rooks onto open files!"},
+      {type:'interaction', text:"Click the White Rook to see its straight-line moves!"},
+    ],
+    board:{d4:'wR', d7:'bP', g4:'bB', a4:'bN'},
+    interactive:true, clickable:'w',
+    boardLabel:"Click the White Rook (♖) — notice it moves in straight lines only!",
+  },
+  {
+    title:'The Bishop ♗', subtitle:'The diagonal slider', emoji:'⛪',
+    content:[
+      {type:'text', text:"The Bishop is a long-range piece that glides along diagonals. It has one fun quirk: it can never change the color of square it travels on!"},
+      {type:'box',color:'green',icon:'↗️',title:'How the Bishop Moves',
+        text:"The Bishop slides diagonally in any direction — any number of squares. Because diagonals never change color, your Bishop is 'stuck' on one color forever!"},
+      {type:'box',color:'blue',icon:'🎨',title:'Two Bishops, Two Colors',
+        text:"Each player has two Bishops — one that lives on light squares, one on dark squares. They complement each other since they cover different territory!"},
+      {type:'box',color:'yellow',icon:'💰',title:"The Bishop's Value",
+        text:"A Bishop is worth about 3 points, same as a Knight. Having BOTH your Bishops (the 'Bishop pair') is often a real advantage — especially in open positions."},
+      {type:'interaction', text:"Click the White Bishop to see its diagonal movement pattern!"},
+    ],
+    board:{c3:'wB', f6:'bP', e5:'bN', a5:'bR'},
+    interactive:true, clickable:'w',
+    boardLabel:"Click the White Bishop (♗) — it moves diagonally and never changes square color!",
+  },
+  {
+    title:'The Knight ♘', subtitle:'The tricky jumper', emoji:'🐴',
+    content:[
+      {type:'text', text:"The Knight is the most unusual piece in chess. It moves in a way unlike any other, and it has a completely unique superpower!"},
+      {type:'box',color:'green',icon:'🔲',title:"The L-Shape Move",
+        text:"The Knight moves in an 'L' shape: 2 squares in one direction, then 1 square to the side. You can also think of it as 1 square one way, then 2 squares sideways. It always lands on a different colored square!"},
+      {type:'box',color:'purple',icon:'✈️',title:'Knights Can Jump!',
+        text:"This is the Knight's superpower: it is the ONLY piece that can jump over other pieces. Rows of blocking pawns? No problem for a Knight!"},
+      {type:'box',color:'yellow',icon:'📍',title:'Center vs. Edge',
+        text:"A Knight in the CENTER of the board can reach up to 8 squares. A Knight stuck on the EDGE can only reach 4 squares. Keep your Knights near the center!"},
+      {type:'interaction', text:"Click the Knight — notice it jumps right over all those Black pawns!"},
+    ],
+    board:{d4:'wN', c3:'bP',c5:'bP',e3:'bP',e5:'bP',b3:'bP',b5:'bP',f3:'bP',f5:'bP'},
+    interactive:true, clickable:'w',
+    boardLabel:"Click the White Knight (♘) — it jumps over every single surrounding pawn!",
+  },
+  {
+    title:'The Pawn ♙', subtitle:'Small but mighty', emoji:'⚔️',
+    content:[
+      {type:'text', text:"Pawns are the foot soldiers of chess — you have 8 of them. Individually weak, but together they shape the entire structure of the game!"},
+      {type:'box',color:'green',icon:'⬆️',title:'Forward Only — No Going Back!',
+        text:"Pawns move forward ONE square at a time. On their very first move, they may optionally advance TWO squares. They can NEVER move backward, so think before you push them!"},
+      {type:'box',color:'blue',icon:'↗️',title:'Diagonal Captures',
+        text:"Pawns attack diagonally — one square forward-left or forward-right. They cannot capture pieces directly in front of them, only to the diagonal!"},
+      {type:'box',color:'purple',icon:'⭐',title:'Promotion — Pawn Becomes Queen!',
+        text:"If a Pawn marches all the way to the opposite end of the board (rank 8 for White, rank 1 for Black), it PROMOTES — it can become any piece. Almost always choose the Queen!"},
+      {type:'tip', text:"Pawn moves are permanent — they can't go back! Always think twice before advancing a pawn."},
+      {type:'interaction', text:"Click any White Pawn to see where it can move and capture!"},
+    ],
+    board:{a2:'wP',c4:'wP',e2:'wP',g2:'wP', b5:'bP',d5:'bP',d3:'bN',f3:'bB'},
+    interactive:true, clickable:'w',
+    boardLabel:"Click any White Pawn (♙) — notice how it moves forward but captures diagonally!",
+  },
+  {
+    title:'Check & Checkmate', subtitle:'The heart of the game', emoji:'⚠️',
+    content:[
+      {type:'text', text:"You now know how every piece moves. Time to learn the two most important concepts in all of chess!"},
+      {type:'box',color:'yellow',icon:'⚠️',title:'CHECK',
+        text:"When your King is attacked by an enemy piece, you are in CHECK. You MUST deal with it on your very next move — nothing else is allowed!\n\nThree ways to escape check:\n1. Move your King to a safe square\n2. Block the attack with another piece\n3. Capture the attacking piece"},
+      {type:'box',color:'red',icon:'🏁',title:'CHECKMATE — Game Over!',
+        text:"When a King is in check AND there is no possible way to escape, that is CHECKMATE. The player who delivers checkmate WINS. This is the entire goal of the game!"},
+      {type:'box',color:'blue',icon:'🤝',title:'STALEMATE — Draw',
+        text:"If a player has no legal moves but is NOT in check, the game is a DRAW called stalemate. This is not a win — it's a tie! Clever defenders sometimes aim for stalemate when losing."},
+      {type:'tip', text:"When you attack the opponent's King, it's good sportsmanship to announce 'Check!' so your opponent is aware."},
+    ],
+    board:{e1:'wK',f1:'wR',g1:'wN',e3:'wQ', h7:'bK',g6:'bR',f7:'bP',g7:'bP',h6:'bP'},
+    interactive:false,
+    boardLabel:"A typical middlegame position — the King's safety is always the top priority!",
+  },
+  {
+    title:'Special Moves', subtitle:'Advanced rules you must know', emoji:'✨',
+    content:[
+      {type:'text', text:"Chess has three special moves that break the usual rules. Every player needs to know these — they come up all the time!"},
+      {type:'box',color:'purple',icon:'🏰',title:'CASTLING',
+        text:"A one-time-per-game special move for the King and one Rook. The King slides 2 squares toward the Rook, and the Rook hops to the other side of the King.\n\nYou CANNOT castle if:\n• The King or that Rook has already moved\n• Any piece stands between them\n• The King is currently in check\n• The King would cross or land on an attacked square"},
+      {type:'box',color:'green',icon:'⚡',title:'EN PASSANT',
+        text:"A sneaky pawn capture! If an enemy pawn moves 2 squares forward from its starting square and lands beside your pawn, YOUR pawn can capture it diagonally as if it only moved 1 square. You must do it immediately on the very next move or the chance is gone forever!"},
+      {type:'box',color:'yellow',icon:'⭐',title:'PROMOTION',
+        text:"When a pawn reaches the far end of the board, it MUST promote — it becomes a Queen, Rook, Bishop, or Knight. Almost always pick the Queen. You can even have multiple Queens on the board at once!"},
+      {type:'tip', text:"Castling early is one of the smartest things you can do — it protects your King and connects your Rooks!"},
+    ],
+    board:{e1:'wK',h1:'wR',a1:'wR', e8:'bK',h8:'bR',a8:'bR', d5:'wP',e5:'bP'},
+    interactive:false,
+    boardLabel:"Kings and Rooks ready to castle. Also see the pawns positioned for a possible en passant capture!",
+  },
+  {
+    title:'Tips for Beginners', subtitle:'Start playing like a pro', emoji:'🌟',
+    content:[
+      {type:'text', text:"You now know all the rules of chess! Here are the essential beginner tips that will immediately improve your game."},
+      {type:'list',title:'🏆 The Golden Rules of Beginner Chess:',
+        items:[
+          "Control the CENTER — push pawns to e4 and d4 (White) or e5 and d5 (Black) to claim the middle of the board",
+          "DEVELOP your pieces — get your Knights and Bishops off the back rank in the first few moves",
+          "CASTLE early — get your King to safety behind a wall of pawns before attacking",
+          "Don't move the same piece twice in the opening unless you absolutely must",
+          "Don't bring your Queen out too early — she'll get chased around and waste your turns",
+          "Before every move, ask: 'Can my opponent capture this piece for free?'",
+          "Ask yourself: 'Why did my opponent make that move?' — look for threats before acting",
+          "Never give up! Even lost-looking positions can sometimes be saved",
+        ]},
+      {type:'box',color:'green',icon:'🎉',title:"You're Ready to Play!",
+        text:"You now know everything you need to start playing real chess! The absolute best way to improve is to play lots of games, lose often, and learn from every single mistake. Every grandmaster started exactly where you are right now."},
+      {type:'tip', text:"Losing is learning in disguise. Play lots of games, be curious about your mistakes, and enjoy the process!"},
+    ],
+    board:START, interactive:false,
+    boardLabel:"The starting position — you now know exactly what to do from here. Go play!",
+  },
+];
+
+// ── Content block renderer ──────────────────────────────────────────────────────
+function Block({ b }) {
+  const palettes = {
+    green:  {bg:'#e8f5e9', bar:'#4CAF50', head:'#2e7d32'},
+    blue:   {bg:'#e3f2fd', bar:'#2196F3', head:'#1565c0'},
+    yellow: {bg:'#fffde7', bar:'#ffc107', head:'#e65100'},
+    red:    {bg:'#ffebee', bar:'#f44336', head:'#b71c1c'},
+    purple: {bg:'#f3e5f5', bar:'#9c27b0', head:'#6a1b9a'},
+  };
+
+  if (b.type==='text') return (
+    <p style={{fontSize:15,lineHeight:1.75,color:'#444',marginBottom:14}}>{b.text}</p>
+  );
+
+  if (b.type==='box') {
+    const c = palettes[b.color]||palettes.green;
+    return (
+      <div style={{background:c.bg,borderLeft:`4px solid ${c.bar}`,borderRadius:8,
+        padding:'13px 15px',margin:'10px 0'}}>
+        <div style={{fontWeight:700,color:c.head,marginBottom:6,fontSize:13}}>
+          {b.icon} {b.title}
+        </div>
+        <div style={{color:'#333',lineHeight:1.7,fontSize:14,whiteSpace:'pre-line'}}>{b.text}</div>
+      </div>
+    );
+  }
+
+  if (b.type==='tip') return (
+    <div style={{background:'#fff8e1',borderLeft:'4px solid #ffc107',borderRadius:8,
+      padding:'11px 14px',margin:'10px 0',display:'flex',gap:10,alignItems:'flex-start'}}>
+      <span style={{fontSize:18,flexShrink:0}}>💡</span>
+      <div style={{color:'#333',lineHeight:1.7,fontSize:14}}>{b.text}</div>
+    </div>
+  );
+
+  if (b.type==='interaction') return (
+    <div style={{background:'#e8eaf6',borderLeft:'4px solid #3f51b5',borderRadius:8,
+      padding:'11px 14px',margin:'10px 0',display:'flex',gap:10,alignItems:'center'}}>
+      <span style={{fontSize:22}}>👆</span>
+      <div style={{color:'#333',lineHeight:1.6,fontSize:14,fontWeight:600}}>{b.text}</div>
+    </div>
+  );
+
+  if (b.type==='list') return (
+    <div style={{margin:'10px 0'}}>
+      {b.title && <div style={{fontWeight:700,color:'#333',marginBottom:10,fontSize:15}}>{b.title}</div>}
+      <ul style={{paddingLeft:20,margin:0}}>
+        {b.items.map((item,i)=>(
+          <li key={i} style={{marginBottom:8,lineHeight:1.7,color:'#444',fontSize:14}}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  return null;
+}
+
+// ── Chess Board component ───────────────────────────────────────────────────────
+function Board({ board, interactive, clickable }) {
+  const [sel, setSel]   = useState(null);
+  const [hi,  setHi]    = useState([]);
+
+  useEffect(() => { setSel(null); setHi([]); }, [board]);
+
+  const click = (sq) => {
+    if (!interactive) return;
+    const p = board[sq];
+    if (p && p[0]===clickable) {
+      if (sel===sq) { setSel(null); setHi([]); }
+      else { setSel(sq); setHi(getMoves(p,sq,board)); }
+    } else { setSel(null); setHi([]); }
+  };
+
+  const ranks=[8,7,6,5,4,3,2,1];
+  const files=['a','b','c','d','e','f','g','h'];
+  const SZ=54;
+
+  return (
+    <div style={{userSelect:'none'}}>
+      {/* file labels top */}
+      <div style={{display:'flex',paddingLeft:22,marginBottom:3}}>
+        {files.map(f=>(
+          <div key={f} style={{width:SZ,textAlign:'center',fontSize:11,color:'#999',fontWeight:600}}>{f}</div>
+        ))}
+      </div>
+
+      <div style={{display:'flex',alignItems:'flex-start'}}>
+        {/* rank labels left */}
+        <div style={{display:'flex',flexDirection:'column',marginRight:2,width:20}}>
+          {ranks.map(r=>(
+            <div key={r} style={{height:SZ,display:'flex',alignItems:'center',justifyContent:'center',
+              fontSize:11,color:'#999',fontWeight:600}}>{r}</div>
+          ))}
+        </div>
+
+        {/* board grid */}
+        <div style={{
+          display:'grid',
+          gridTemplateColumns:`repeat(8,${SZ}px)`,
+          gridTemplateRows:`repeat(8,${SZ}px)`,
+          border:'3px solid #5c3d1f',
+          borderRadius:4,
+          overflow:'hidden',
+          boxShadow:'0 6px 24px rgba(0,0,0,0.22)',
+        }}>
+          {ranks.flatMap(rank=>files.map(file=>{
+            const sq   = file+rank;
+            const piece = board[sq];
+            const light = (files.indexOf(file)+rank)%2===1;
+            const isSel = sq===sel;
+            const isHi  = hi.includes(sq);
+            const isCap = isHi && !!piece;
+
+            let bg = light ? '#f0d9b5' : '#b58863';
+            if (isSel) bg = light ? '#f6f669' : '#baca2b';
+
+            return (
+              <div key={sq} onClick={()=>click(sq)} style={{
+                width:SZ,height:SZ,backgroundColor:bg,
+                display:'flex',alignItems:'center',justifyContent:'center',
+                cursor:interactive?'pointer':'default',
+                position:'relative',
+              }}>
+                {isHi && !isCap && (
+                  <div style={{
+                    width:SZ*0.34,height:SZ*0.34,borderRadius:'50%',
+                    backgroundColor:'rgba(0,0,0,0.17)',position:'absolute',pointerEvents:'none',
+                  }}/>
+                )}
+                {isCap && (
+                  <div style={{
+                    width:SZ-5,height:SZ-5,borderRadius:'50%',
+                    border:'4px solid rgba(0,0,0,0.2)',position:'absolute',pointerEvents:'none',
+                  }}/>
+                )}
+                {piece && (
+                  <span style={{
+                    fontSize:32,lineHeight:1,zIndex:1,
+                    color: piece[0]==='w' ? '#ffffff' : '#1a1a1a',
+                    textShadow: piece[0]==='w'
+                      ? '0 0 3px #000,0 1px 5px rgba(0,0,0,0.9)'
+                      : '0 1px 2px rgba(0,0,0,0.15)',
+                    filter:'drop-shadow(0 1px 1px rgba(0,0,0,0.35))',
+                  }}>
+                    {SYM[piece]}
+                  </span>
+                )}
+              </div>
+            );
+          }))}
+        </div>
+
+        {/* rank labels right */}
+        <div style={{display:'flex',flexDirection:'column',marginLeft:2,width:20}}>
+          {ranks.map(r=>(
+            <div key={r} style={{height:SZ,display:'flex',alignItems:'center',justifyContent:'center',
+              fontSize:11,color:'#999',fontWeight:600}}>{r}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* file labels bottom */}
+      <div style={{display:'flex',paddingLeft:22,marginTop:3}}>
+        {files.map(f=>(
+          <div key={f} style={{width:SZ,textAlign:'center',fontSize:11,color:'#999',fontWeight:600}}>{f}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ────────────────────────────────────────────────────────────────────
+function App() {
+  const [idx,  setIdx]  = useState(0);
+  const [done, setDone] = useState(new Set());
+  const lesson = LESSONS[idx];
+  const pct    = Math.round(((idx+1)/LESSONS.length)*100);
+
+  const goTo = (i) => {
+    if (i<0||i>=LESSONS.length) return;
+    setDone(prev=>new Set([...prev,idx]));
+    setIdx(i);
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+
+  return (
+    <div style={{minHeight:'100vh',background:'#eef0f3'}}>
+
+      {/* ── Header ── */}
+      <header style={{
+        background:'linear-gradient(135deg,#1a1a2e,#16213e)',
+        color:'#fff',height:64,padding:'0 24px',
+        display:'flex',alignItems:'center',justifyContent:'space-between',
+        position:'sticky',top:0,zIndex:200,
+        boxShadow:'0 2px 12px rgba(0,0,0,0.4)',
+      }}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:26}}>♟</span>
+          <div>
+            <div style={{fontWeight:700,fontSize:17}}>Chess for Beginners</div>
+            <div style={{fontSize:11,opacity:.65}}>Learn chess — one step at a time</div>
+          </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:14}}>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:11,opacity:.7}}>Progress</div>
+            <div style={{fontSize:13,fontWeight:700}}>{pct}%</div>
+          </div>
+          <div style={{width:130,height:7,background:'rgba(255,255,255,0.15)',borderRadius:4,overflow:'hidden'}}>
+            <div style={{width:`${pct}%`,height:'100%',
+              background:'linear-gradient(90deg,#4CAF50,#8BC34A)',
+              borderRadius:4,transition:'width .4s ease'}}/>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Layout ── */}
+      <div id="layout" style={{display:'flex',maxWidth:1220,margin:'0 auto',padding:'24px 16px',gap:22}}>
+
+        {/* Sidebar */}
+        <div id="sidebar" style={{
+          width:228,flexShrink:0,background:'#fff',borderRadius:12,
+          padding:14,boxShadow:'0 2px 8px rgba(0,0,0,0.07)',
+          height:'fit-content',position:'sticky',top:76,
+        }}>
+          <div style={{fontSize:11,fontWeight:700,color:'#aaa',textTransform:'uppercase',
+            letterSpacing:'1px',marginBottom:10,paddingLeft:4}}>Lessons</div>
+          {LESSONS.map((l,i)=>(
+            <button key={i} onClick={()=>goTo(i)} style={{
+              display:'flex',alignItems:'center',gap:8,width:'100%',
+              padding:'9px 10px',borderRadius:8,border:'none',textAlign:'left',
+              background:i===idx?'#e8f5e9':'transparent',
+              color:i===idx?'#2e7d32':'#555',
+              cursor:'pointer',fontSize:13,fontWeight:i===idx?700:400,
+              marginBottom:2,transition:'background .15s',
+            }}>
+              <span style={{fontSize:15,flexShrink:0}}>{l.emoji}</span>
+              <span style={{lineHeight:1.3,flex:1}}>{l.title}</span>
+              {done.has(i) && <span style={{color:'#4CAF50',fontSize:12}}>✓</span>}
+            </button>
+          ))}
+        </div>
+
+        {/* Main content */}
+        <div style={{flex:1,minWidth:0}}>
+
+          {/* Lesson card */}
+          <div style={{background:'#fff',borderRadius:12,padding:28,
+            boxShadow:'0 2px 8px rgba(0,0,0,0.07)',marginBottom:16}}>
+
+            {/* Title row */}
+            <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:22,
+              paddingBottom:18,borderBottom:'1px solid #f0f0f0'}}>
+              <span style={{fontSize:44}}>{lesson.emoji}</span>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:'#bbb',
+                  textTransform:'uppercase',letterSpacing:'1px',marginBottom:3}}>
+                  Lesson {idx+1} of {LESSONS.length}
+                </div>
+                <h1 style={{margin:0,fontSize:24,color:'#1a1a2e',lineHeight:1.2}}>{lesson.title}</h1>
+                <p style={{margin:'4px 0 0 0',color:'#888',fontSize:14}}>{lesson.subtitle}</p>
+              </div>
+            </div>
+
+            {/* Body: text + board */}
+            <div id="lesson-body" style={{display:'flex',gap:30,flexWrap:'wrap'}}>
+              <div style={{flex:'1 1 280px'}}>
+                {lesson.content.map((b,i)=><Block key={i} b={b}/>)}
+              </div>
+              <div style={{flexShrink:0,display:'flex',flexDirection:'column',alignItems:'center'}}>
+                <Board
+                  board={lesson.board}
+                  interactive={lesson.interactive}
+                  clickable={lesson.clickable}
+                />
+                <p style={{textAlign:'center',color:'#999',fontSize:12,marginTop:10,
+                  fontStyle:'italic',maxWidth:460,lineHeight:1.5}}>
+                  {lesson.boardLabel}
+                </p>
+                {lesson.interactive && (
+                  <div style={{marginTop:12,padding:'8px 16px',background:'#e8eaf6',
+                    borderRadius:20,fontSize:12,color:'#3f51b5',fontWeight:600}}>
+                    ← Click a highlighted piece to see its moves
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <button onClick={()=>goTo(idx-1)} disabled={idx===0} style={{
+              padding:'11px 22px',borderRadius:8,border:'2px solid #ddd',
+              background:'#fff',color:idx===0?'#ccc':'#444',
+              cursor:idx===0?'not-allowed':'pointer',fontSize:14,fontWeight:600,
+            }}>← Previous</button>
+
+            {/* Dot progress */}
+            <div style={{display:'flex',gap:5,alignItems:'center'}}>
+              {LESSONS.map((_,i)=>(
+                <button key={i} onClick={()=>goTo(i)} style={{
+                  width:i===idx?22:7,height:7,borderRadius:4,
+                  border:'none',padding:0,cursor:'pointer',
+                  background:i===idx?'#4CAF50':done.has(i)?'#a5d6a7':'#ddd',
+                  transition:'all .3s',
+                }}/>
+              ))}
+            </div>
+
+            {idx<LESSONS.length-1 ? (
+              <button onClick={()=>goTo(idx+1)} style={{
+                padding:'11px 24px',borderRadius:8,border:'none',
+                background:'linear-gradient(135deg,#4CAF50,#388e3c)',
+                color:'#fff',cursor:'pointer',fontSize:14,fontWeight:700,
+                boxShadow:'0 2px 10px rgba(76,175,80,0.4)',
+              }}>Next Lesson →</button>
+            ) : (
+              <button onClick={()=>{setDone(new Set(LESSONS.map((_,i)=>i))); goTo(0);}} style={{
+                padding:'11px 24px',borderRadius:8,border:'none',
+                background:'linear-gradient(135deg,#ff9800,#e65100)',
+                color:'#fff',cursor:'pointer',fontSize:14,fontWeight:700,
+                boxShadow:'0 2px 10px rgba(255,152,0,0.4)',
+              }}>🏆 Start Over</button>
+            )}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
